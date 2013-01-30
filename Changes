@@ -1,0 +1,10 @@
+Revision history for Perl extension Astro::SkyX.
+
+0.04  Sun Jan 30 15:12:25 2013 //rhw
+        - Fixed a bug in sky6RASCOMTele->Asychronous
+0.03  Sun Jan 20 13:43:34 2013 //rhw
+        - Added ccdsoftCamera and ccdsoftImage classes (SkyX 10.2.0 Build 6519 and later)
+0.02  Fri Jan 20 18:31:31 2012
+	- original version; created by h2xs 1.23 with options
+		-AX -n SkyX
+
