@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Astro-SkyX
-version:            0.04
+version:            0.07
 abstract:           Perl extension for communications with The SkyX Scripting Engine Version 10.2.0 (Build 6519 and later).
 author:
     - Robert Woodard <kayak.man@gmail.com>

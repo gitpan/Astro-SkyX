@@ -1,4 +1,4 @@
-package Astro::SkyX::ccdsoftImage;
+package Astro::SkyX::ccdsoftCameraImage;
 
 use 5.006001;
 use strict;
@@ -58,7 +58,7 @@ our @READWRITEPROPS = qw( Background DataArray DetachOnClose ModifiedFlag Path R
       my $method = $1;
       # Let's build the javascript
 #      $newtext = join ',', map{ qq/"$_"/ }@newval;
-      $newtext = join ',', map{ /^[0-9.]*$/ ? $_ : qq/'$_'/ }@newval;
+      $newtext = join ',', map{ /^[0-9.-]*$/ ? $_ : qq/'$_'/ }@newval;
       $method =~ tr/::/./s;
 
       my ($package, $propertyName) = $AUTOLOAD =~ m/^(.+::)(.+)$/;

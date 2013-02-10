@@ -27,7 +27,7 @@ our @EXPORT = qw(
 );
 
 our $VERSION = '0.03';
-our @PROPERTIES = qw( Abort CommutateMotors Connect DoCommand Disconnect FindHome FocusInFast FocusInSlow FocusOutFast FocusOutSlow GetAzAlt GetRaDec Jog Park SetParkPosition SetTracking SlewToAzAlt SlewToRaDEC Sync );
+our @PROPERTIES = qw( Abort CommutateMotors Connect DoCommand Disconnect FindHome FocusInFast FocusInSlow FocusOutFast FocusOutSlow GetAzAlt GetRaDec Jog Park SetParkPosition SetTracking SlewToAzAlt Sync SlewToRaDec );
 our @READWRITEPROPS = qw( Asynchronous );
 
 # Preloaded methods go here.
@@ -58,7 +58,8 @@ our @READWRITEPROPS = qw( Asynchronous );
       my $method = $1;
       # Let's build the javascript
 #      $newtext = join ',', map{ qq/"$_"/ }@newval;
-      $newtext = join ',', map{ /^[0-9.]*$/ ? $_ : qq/'$_'/ }@newval;
+      $newtext = join ',', map{ /^[0-9.-]*$/ ? $_ : qq/'$_'/ }@newval;
+#      print "newtext = $newtext\n";
       $method =~ tr/::/./s;
 
       my ($package, $propertyName) = $AUTOLOAD =~ m/^(.+::)(.+)$/;

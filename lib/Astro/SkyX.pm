@@ -11,7 +11,8 @@ require Astro::SkyX::ImageLink;
 require Astro::SkyX::ImageLinkResults;
 require Astro::SkyX::TheSkyXAction;
 require Astro::SkyX::ccdsoftCamera;
-require Astro::SkyX::ccdsoftImage;
+require Astro::SkyX::ccdsoftCameraImage;
+require Astro::SkyX::ccdsoftAutoguiderImage;
 require Astro::SkyX::sky6DataWizard;
 require Astro::SkyX::sky6DirectGuide;
 require Astro::SkyX::sky6Dome;
@@ -38,7 +39,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 );
 
-our $VERSION = '0.04';
+our $VERSION = '0.07';
  
  my %attr_data = 
      (
@@ -76,7 +77,8 @@ our $VERSION = '0.04';
         _sky6Utils	=> $_[20],
         _sky6Web	=> $_[21],
         _ccdsoftCamera  => $_[22],
-        _ccdsoftImage   => $_[23],
+        _ccdsoftCameraImage   => $_[23],
+        _ccdsoftAutoguiderImage   => $_[24],
 	}, $class;
     $self->{_Application} = Astro::SkyX::Application::new("Astro::SkyX::Application");
     $self->{_ImageLink} = Astro::SkyX::ImageLink::new("Astro::SkyX::ImageLink");
@@ -95,7 +97,8 @@ our $VERSION = '0.04';
     $self->{_sky6Utils} = Astro::SkyX::sky6Utils::new("Astro::SkyX::sky6Utils");
     $self->{_sky6Web} = Astro::SkyX::sky6Web::new("Astro::SkyX::sky6Web");
     $self->{_ccdsoftCamera} = Astro::SkyX::ccdsoftCamera::new("Astro::SkyX::ccdsoftCamera");
-    $self->{_ccdsoftImage} = Astro::SkyX::ccdsoftImage::new("Astro::SkyX::ccdsoftImage");
+    $self->{_ccdsoftCameraImage} = Astro::SkyX::ccdsoftCameraImage::new("Astro::SkyX::ccdsoftCameraImage");
+    $self->{_ccdsoftAutoguiderImage} = Astro::SkyX::ccdsoftAutoguiderImage::new("Astro::SkyX::ccdsoftAutoguiderImage");
     return $self;
   }
 
@@ -180,9 +183,14 @@ our $VERSION = '0.04';
     return $self->{_ccdsoftCamera};
   }
 
-  sub ccdsoftImage {
+  sub ccdsoftCameraImage {
     my $self = shift @_;
-    return $self->{_ccdsoftImage};
+    return $self->{_ccdsoftCameraImage};
+  }
+
+  sub ccdsoftAutoguiderImage {
+    my $self = shift @_;
+    return $self->{_ccdsoftAutoguiderImage};
   }
 
   sub connect {
@@ -210,40 +218,36 @@ our $VERSION = '0.04';
   }
 
   sub Send {
-#   my $signal = $SIG{INT};
-#   if ( IGNORECTLC ){
-#     $SIG{INT} = 'IGNORE';
-#   }
+   my $signal = $SIG{INT};
+   if ( IGNORECTLC ){
+     $SIG{INT} = 'IGNORE';
+   }
    my ($self,$sendtext) = @_;
    $sendtext =~ s/\\/\\\\/g;
    print $SkyXConnection "$sendtext\r\n";
 #   print "Sending...\n$sendtext\n";
    $SkyXConnection->flush;
-#   $SIG{INT} = $signal;
+   $SIG{INT} = $signal;
   }
 
   sub Get {
-   my $signal = $SIG{INT};
-   if ( IGNORECTLC ){
-     $SIG{INT} = 'IGNORE';
-   }
-   my ($self) = @_;
-
-   my $output = undef;
-   $error = "";
-
-   while ( ! defined($output) or ($output !~ /[|].*Error = .*\./) ) {
-        my $data = '';
-     while ( my @read_from = $select->can_read(.0001) ) {
-          $read_from[0]->recv($data,1500);
-     }
-     $output .= $data if $data;
+    my $signal = $SIG{INT};
+    if ( IGNORECTLC ){
+      $SIG{INT} = 'IGNORE';
     }
-
-   ($output,$error) = split /[|]/,$output;
-#   print "$output | $error \n" ;
-   $SIG{INT} = $signal;
-   return ($output);
+    my ($self) = @_;
+    my $output = undef;
+    $error = "";
+    while ( ! defined($output) or ($output !~ /[|].*Error = .*\./) ) {
+      while ( my @read_from = $select->can_read(0) ) {
+          my $data = '';
+          $read_from[0]->recv($data,1024);
+          $output .= $data if $data;
+      }
+    }
+    ($output,$error) = split(/\|([^|]+)$/,$output);
+    $SIG{INT} = $signal;
+    return ($output);
   }
 
   sub getError {

@@ -1,4 +1,4 @@
-package Astro::SkyX::ImageLinkResults;
+package Astro::SkyX::ccdsoftAutoguiderImage;
 
 use 5.006001;
 use strict;
@@ -27,9 +27,8 @@ our @EXPORT = qw(
 );
 
 our $VERSION = '0.03';
-our @PROPERTIES = qw(  );
-our @READWRITEPROPS = qw( );
-#our @READPROPS = qw( imageScale errorText imageFilePath );
+our @PROPERTIES = qw( AttachToActive ApplyBackgroundRange AttachToActiveAutoguider AttachToActiveImager Close New Open Save SetActive Zoom FITSKeyword setFITSKeyword InsertWCS XYToRADec RADecToXY WCSArray ShowInventory InventoryArray FindInventoryAtRADec MakeComparisonStarChart );
+our @READWRITEPROPS = qw( Background DataArray DetachOnClose ModifiedFlag Path Range ScaleInArcsecondsPerPixel Visible WindowLeft WindowTop );
 
 # Preloaded methods go here.
 
@@ -50,7 +49,7 @@ our @READWRITEPROPS = qw( );
 #    sub _incr_count { ++$_count }
 #    sub _decr_count { --$_count }
 
-  sub AUTOLOAD ($;$) {
+ sub AUTOLOAD ($;$) {
     no strict "refs";
     my ($self, @newval) = @_;
     my $newtext = '';
@@ -75,7 +74,7 @@ our @READWRITEPROPS = qw( );
       return Astro::SkyX::Get($self);
     }
     die "No such method: $AUTOLOAD";
-  }
+ }
 
  sub haveReadWriteProp{
         my ($value) = @_;

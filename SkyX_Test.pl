@@ -24,7 +24,8 @@
 # Still need tests for:
 # Astro::SkyX::sky6StarChart
 # Astro::SkyX::sky6Utils
-# Astro::SkyX::ccdsoftImage
+# Astro::SkyX::ccdsoftCameraImage
+# Astro::SkyX::ccdsoftAutoguiderImage
 #
 # Modules I can't test:
 # Astro::SkyX::sky6Dome (No Dome license)
@@ -62,8 +63,15 @@ if ( !$slewtarget ){
 
 ########## Initialize the module and connect to TheSkyX ############
 
-initSX();
+#change to IP if across network
+initSX('localhost');
+#initSX('192.168.3.96');
 
+####################################################################
+# This tests the raw Send/Get methods to send raw java script      #
+####################################################################
+
+testSendGet();
 ####################################################################
 # Is SkyX initialized? What version? This fully tests              #
 # the Astro::SkyX::Application module                              #
@@ -73,24 +81,6 @@ testApplication();
 # Print out error from the last command if there was one.
   print "  SkyX module query to see if there was an error on the last command:\n";
   print "  " . $SX->getError() . "\n";
-
-####################################################################
-# Test Image linking.                                              #
-# Fully tests the Astro::SkyX::ImageLink module.                   #
-####################################################################
-
-# If I wasn't so lazy I would grab a DSS image first and
-# image link that...
-
-testImageLink('c:\Users\Woody\Desktop\test.fits'); # Windows
-# testImageLink('/Users/woody/Desktop/test.fits'); # Mac OSX
-
-####################################################################
-# Test ImageLinkResults class module. Fully tests the              #
-# Astro::SkyX::ImageLinkResults module.                            #
-####################################################################
-
-testImageLinkResults();
 
 ####################################################################
 # Test TheSkyXAction class module. Fully tests the                 #
@@ -143,9 +133,9 @@ testsky6RASCOMTheSky();
 ####################################################################
 
 if ( $movetests ) {
-  testsky6RASCOMTele();
+  testsky6RASCOMTele("$slewtarget");
 }else{
-  print "sky6DirectGuide not tested because of potential telescope movement.\n";
+  print "sky6RASCOMTele  not tested because of potential telescope movement.\n";
 }
 
 ####################################################################
@@ -157,7 +147,7 @@ if ( $movetests ) {
 if ( $movetests ) {
   testsky6Web("$slewtarget");
 }else{
-  print "sky6DirectGuide not tested because of potential telescope movement.\n";
+  print "sky6Web not tested because of potential telescope movement.\n";
 }
 
 ####################################################################
@@ -167,10 +157,31 @@ if ( $movetests ) {
 testccdsoftCamera();
 
 ####################################################################
-# Tests for Astro::SkyX::ccdsoftImage module.                      #
+# Test Image linking.                                              #
+# Fully tests the Astro::SkyX::ImageLink module.                   #
 ####################################################################
 
-testccdsoftImage();
+# If I wasn't so lazy I would grab a DSS image first and
+# image link that...
+# testImageLink(pathtoFITS,imagescale,unknownscale)
+my $DSSimage = $SX->ccdsoftCamera->LastImageFileName;
+#testImageLink($DSSimage,1.70,1); 
+#testImageLink('C:\Users\Woody\Desktop\test.fits',1.50,1); 
+# testImageLink('/Users/woody/Desktop/test.fits',1.48,0); # Mac OSX
+
+####################################################################
+# Test ImageLinkResults class module. Fully tests the              #
+# Astro::SkyX::ImageLinkResults module.                            #
+####################################################################
+
+testImageLinkResults();
+
+####################################################################
+# Tests for Astro::SkyX::ccdsoftCameraImage module.                      #
+####################################################################
+
+testccdsoftCameraImage($DSSimage);
+#testccdsoftCameraImage('C:\Users\Woody\Desktop\test.fits');
 
 # Turn tracking off and disconnect all
 
@@ -188,28 +199,57 @@ exit;
 
 
 sub initSX {
+  my $ipaddr = shift;
 # Establish new object
   $SX = Astro::SkyX->new();
 # Connect using IP/hostname and port number
-  $Skysock = $SX->connect('192.168.3.96','3040');
+  $Skysock = $SX->connect($ipaddr,'3040');
 #   $Skysock = $SX->connect('localhost','3040');
 }
 
+sub testSendGet {
+  print "Testing Send/Get routines.\n";
+  my $aa='';
+  my $javastring = ' /* Java Script */
+ /*   Find.js */
+var Out;
+var PropCnt = 189;
+var p;
+
+Out="";
+sky6StarChart.Find("Saturn");
+
+for (p=0;p<PropCnt;++p)
+{
+   if (sky6ObjectInformation.PropertyApplies(p) != 0)
+	{
+		/*Latch the property into ObjInfoPropOut*/
+      sky6ObjectInformation.Property(p);
+      Out += sky6ObjectInformation.ObjInfoPropOut + "|";
+   }
+}';
+
+  $SX->Send($javastring);
+  $aa = $SX->Get();
+  print "\n  Returning:\n$aa\n\n";    
+  print "Finished testing SendGet.\n";
+}
+
 sub testApplication {
-  print "Testing Application module.\n";
+  print "Testing 100% of the Application module.\n";
   print "\nSkyX Initialized status: ",
     $SX->Application->initialized,
     "\nRunning version: ",
     $SX->Application->version,
     " Build " . $SX->Application->build,
-    " on " . $SX->Application->operatingSystem,
-    " OS. \n";
+    " on OS: " . $SX->Application->operatingSystem,
+    "\n";
   print "Finished testing Application module.\n";
   sleep 1;
 }
 
 sub testTheSkyXAction {
-  print "Testing TheSkyXAction module.\n";
+  print "Testing 100% of the TheSkyXAction module.\n";
 # Need to set a target for some of these commands
   $SX->sky6StarChart->Find("$slewtarget");
   print "ZOOM_IN\n";
@@ -232,6 +272,8 @@ sub testTheSkyXAction {
   sleep 1;
 # TELE_CENTER_CROSS_HAIRS requires connection to telescope, 
 # and must be disconnected to use the TIMESKIP commands
+# Since these commands do not move the telescope, it is safe
+# to connect.
   if (!$SX->sky6RASCOMTele->IsConnected) { 
     print "  Connecting to Telescope. \n";
     $SX->sky6RASCOMTele->Connect();
@@ -254,7 +296,6 @@ sub testTheSkyXAction {
   if ($SX->sky6RASCOMTele->IsConnected) { 
     print "  Disconnecting from Telescope. \n";
     $SX->sky6RASCOMTele->SetTracking(0,1,0,0);
-#    $SX->sky6RASCOMTele->Disconnect();
     $SX->sky6RASCOMTheSky->DisconnectTelescope();
   }else{
     print "  Already disconnected to Telescope. \n";
@@ -282,13 +323,15 @@ sub testTheSkyXAction {
 }
 
 sub testImageLink {
-  print "Testing ImageLink module.\n";
+  print "Testing 100% of ImageLink module.\n";
   my $image = shift;
+  my $scale = shift;
+  my $unknownscale = shift;
   $SX->ImageLink->pathToFITS($image);
   print "pathToFits set to " . $SX->ImageLink->pathToFITS . "\n";
-  $SX->ImageLink->scale(1.48);
+  $SX->ImageLink->scale($scale);
   print "scale set to " . $SX->ImageLink->scale . "\n";
-  $SX->ImageLink->unknownScale(0);
+  $SX->ImageLink->unknownScale($unknownscale);
   print "unknownScale set to " . $SX->ImageLink->unknownScale . "\n";
   print "Executing ImageLink: ";
   $SX->ImageLink->execute();
@@ -297,29 +340,29 @@ sub testImageLink {
 }
 
 sub testImageLinkResults {
-  print "Testing ImageLinkResults module.\n";
+  print "Testing 100% of ImageLinkResults module.\n";
   if ($SX->ImageLinkResults->succeeded){
     print "Sucess!\n";
-    print "ImageScale " . $SX->ImageLinkResults->imageScale . "\n";
-    print "PositionAngle " . $SX->ImageLinkResults->imagePositionAngle . "\n";
-    print "CenterRAJ2000 " . $SX->ImageLinkResults->imageCenterRAJ2000 . "\n";
-    print "CenterDecJ2000 " . $SX->ImageLinkResults->imageCenterDecJ2000 . "\n";
-    print "imageStarCount " . $SX->ImageLinkResults->imageStarCount . "\n";
-    print "solutionStarCount " . $SX->ImageLinkResults->solutionStarCount . "\n";
-    print "catalogStarCount " . $SX->ImageLinkResults->catalogStarCount . "\n";
-    print "imageWidthInPixels " . $SX->ImageLinkResults->imageWidthInPixels . "\n";
-    print "imageHeightInPixels " . $SX->ImageLinkResults->imageHeightInPixels . "\n";
-    print "imageIsMirrored " . $SX->ImageLinkResults->imageIsMirrored . "\n";
-    print "imageFilePath " . $SX->ImageLinkResults->imageFilePath . "\n";
-    print "imageFWHMinArcSeconds " . $SX->ImageLinkResults->imageFWHMinArcSeconds . "\n";
-    print "solutionRMS " . $SX->ImageLinkResults->solutionRMS . "\n";
-    print "solutionRMSX " . $SX->ImageLinkResults->solutionRMSX . "\n";
-    print "solutionRMSY " . $SX->ImageLinkResults->solutionRMSY . "\n";
+    print "ImageScale: " . $SX->ImageLinkResults->imageScale . "\n";
+    print "PositionAngle: " . $SX->ImageLinkResults->imagePositionAngle . "\n";
+    print "CenterRAJ2000: " . $SX->ImageLinkResults->imageCenterRAJ2000 . "\n";
+    print "CenterDecJ2000: " . $SX->ImageLinkResults->imageCenterDecJ2000 . "\n";
+    print "imageWidthInPixels: " . $SX->ImageLinkResults->imageWidthInPixels . "\n";
+    print "imageHeightInPixels: " . $SX->ImageLinkResults->imageHeightInPixels . "\n";
+    print "imageIsMirrored: " . $SX->ImageLinkResults->imageIsMirrored . "\n";
+    print "imageFilePath: " . $SX->ImageLinkResults->imageFilePath . "\n";
+    print "imageStarCount: " . $SX->ImageLinkResults->imageStarCount . "\n";
+    print "imageFWHMinArcSeconds: " . $SX->ImageLinkResults->imageFWHMinArcSeconds . "\n";
+    print "solutionRMS: " . $SX->ImageLinkResults->solutionRMS . "\n";
+    print "solutionRMSX: " . $SX->ImageLinkResults->solutionRMSX . "\n";
+    print "solutionRMSY: " . $SX->ImageLinkResults->solutionRMSY . "\n";
+    print "solutionStarCount: " . $SX->ImageLinkResults->solutionStarCount . "\n";
+    print "catalogStarCount: " . $SX->ImageLinkResults->catalogStarCount . "\n";
   }else{
     print "Failed!\n";
-    print "errorCode " . $SX->ImageLinkResults->errorCode . "\n";
-    print "errorText " . $SX->ImageLinkResults->errorText . "\n";
-    print "searchAborted " . $SX->ImageLinkResults->searchAborted . "\n";
+    print "errorCode: " . $SX->ImageLinkResults->errorCode . "\n";
+    print "errorText: " . $SX->ImageLinkResults->errorText . "\n";
+    print "searchAborted: " . $SX->ImageLinkResults->searchAborted . "\n";
   }
   print "Finished testing ImageLinkResults module.\n";
   sleep 1;
@@ -338,7 +381,7 @@ sub testsky6ObjectInformation {
     $SX->sky6ObjectInformation->Index($i);
     for ( $p = 0; $p <= $PropCnt; $p++) {
       next if $p == 11;
-      if ( $SX->sky6ObjectInformation->PropertyApplies($p) ne "0") {
+      if ( $SX->sky6ObjectInformation->PropertyApplies($p) ) {
         #Latch the property into ObjInfoPropOut
         $SX->sky6ObjectInformation->PropertyName($p);
         my $value = $SX->sky6ObjectInformation->ObjInfoPropOut . ": ";
@@ -363,8 +406,9 @@ sub testsky6DataWizard{
 }
 
 sub testsky6DirectGuide {
-  print "Testing sky6DirectGuide module.\n";
+  print "Testing 100% of sky6DirectGuide module.\n";
   $SX->sky6DirectGuide->IAsynchronous(0);
+  print "  IAsynchronous set to: " . $SX->sky6DirectGuide->IAsynchronous . "\n";
   $SX->sky6DirectGuide->MoveTelescope(900,900);
   print "Finished testing sky6DirectGuide module.\n";
   sleep 1;
@@ -383,7 +427,7 @@ sub testsky6MyFOVs {
     print "FOV Name: " . $FOVName . "\n";
     for ( $p = 0; $p <= $PropCnt; ++$p) {
         $SX->sky6MyFOVs->Property($FOVName,0,$p);
-        print "Property Value $p: " . $SX->sky6MyFOVs->OutVar . "\n";
+        print "  Property Value $p: " . $SX->sky6MyFOVs->OutVar . "\n";
     }
   }
   print "Finished testing sky6MyFOVs module.\n";
@@ -417,7 +461,7 @@ sub testsky6RASCOMTheSky {
 }
 
 sub testsky6RASCOMTele {
-
+  my $target = shift;
   print "Testing sky6RASCOMTele module.\n";
 
 #  Abort() - Not tested
@@ -451,6 +495,12 @@ sub testsky6RASCOMTele {
   sleep 10;
   print "  Finished Focuser In/Out/Fast/Slow\n";
 # populate dAlt,dAz,dRa, and dDec and display them
+  print "  Slewing to $target.\n";
+  $SX->sky6Web->SlewToObject($target);
+  while ( ! defined($SX->sky6RASCOMTele->IsSlewComplete) or $SX->sky6RASCOMTele->IsSlewComplete  ne '1' ) {
+    print "  Slewing...\n";
+    select(undef,undef,undef,4);
+  }
   print "  Call GetAzAlt, GetRaDec, and display \n";
   $SX->sky6RASCOMTele->GetAzAlt();
   $SX->sky6RASCOMTele->GetRaDec();
@@ -458,11 +508,20 @@ sub testsky6RASCOMTele {
   print "  Az is " . $SX->sky6RASCOMTele->dAz . "\n";;
   print "  RA is " . $SX->sky6RASCOMTele->dRa . "\n";;
   print "  Dec is " . $SX->sky6RASCOMTele->dDec . "\n";;
+  my $dRa = $SX->sky6RASCOMTele->dRa;
+  my $dDec = $SX->sky6RASCOMTele->dDec;
+  print "  Returning home to test SlewToRaDec\n";
+  $SX->sky6RASCOMTele->FindHome();
+  print "  Testing SlewToRaDec\n";
+  $SX->sky6RASCOMTele->SlewToRaDec($dRa,$dDec,$target);
+  while ( ! defined($SX->sky6RASCOMTele->IsSlewComplete) or $SX->sky6RASCOMTele->IsSlewComplete  ne '1' ) {
+    print "  Slewing...\n";
+    select(undef,undef,undef,4);
+  }
 # Jog() - Not tested
 # Park() - Not tested
 # Sync() - Not tested
 # SlewToAzAlt() - Not tested
-# SlewToRaDec() - Not tested
 # SetParkPosition() - Not tested
 # Turn tracking off
   print "  Turn tracking off. \n";
@@ -501,15 +560,27 @@ sub testsky6Web {
 }
 
 sub testccdsoftCamera {
+
+
+#    TheSkyX.ccdSoftCamera - added filterWheelConnect(), filterWheelDisconnect() and filterWheelIsConnected() methods().
+#    CCDSoft2XAdaptor.ccdSoft5Image.DataArray now returns a 2-D array instead of a 1-D array, just like CCDSoft.
+#    CCDSoft2XAdaptor.ccdSoft5Image.Width and Height properties no longer return "member not found".
+#    CCDSoft2XAdaptor.ccdSoft5Camera methods that do filter wheel operations do nothing if there is no filter wheel connection, just like CCDSoft.
+#    CCDSoft2XAdaptor.ccdSoft5Camera.lNumberFilters returns zero when not connected, just like CCDSoft.
+
+
   # A LOT more tests need to be added.
   print "Testing ccdsoftCamera module.\n";
   print "  Connecting to Main Imager\n";
+# We'll use this later
+#   ccdsoftCamera::LastImageFileName
   $SX->ccdsoftCamera->Autoguider(0);
   $SX->ccdsoftCamera->Frame(1);
   $SX->ccdsoftCamera->Connect();
   $SX->ccdsoftCamera->Asynchronous(0);
   $SX->ccdsoftCamera->ImageUseDigitizedSkySurvey(1);
-  print "  Taking photo\n";
+  $SX->ccdsoftCamera->AutoSaveOn(1);
+  print "  Taking photo (DSS)\n";
   $SX->ccdsoftCamera->ExposureTime(1);
   $SX->ccdsoftCamera->TakeImage();
   print "  Connecting to Focuser\n";
@@ -532,9 +603,21 @@ sub testccdsoftCamera {
   sleep 1;
 }
 
-sub testccdsoftImage {
-  print "Testing ccdsoftImage module.\n";
-  print "  There are currently no ccdsoftImage tests.\n";
-  print "Finished testing ccdsoftImage module.\n";
+sub testccdsoftCameraImage {
+  my $testImage = shift;
+  print "Testing ccdsoftCameraImage module.\n";
+  $SX->ccdsoftCameraImage->Path($testImage);
+  print "  Image path set to: " . $SX->ccdsoftCameraImage->Path() . "\n";
+  print " test path $testImage\n";
+  $SX->ccdsoftCameraImage->Open();
+  $SX->ccdsoftCameraImage->ScaleInArcsecondsPerPixel(1.70);
+  print "InsertWCS " . $SX->ccdsoftCameraImage->InsertWCS() . "\n";;
+  print "  InsertWCS Error:  " . $SX->getError() . "\n";
+  print "  Image Width: " . $SX->ccdsoftCameraImage->Width . "\n";
+  print "  Image Height: " . $SX->ccdsoftCameraImage->Height . "\n";
+#  print "  Image JulianDay: " . $SX->ccdsoftCameraImage->JulianDay . "\n";
+  print "  Image ModifiedFlag: " . $SX->ccdsoftCameraImage->ModifiedFlag . "\n";
+  $SX->ccdsoftCameraImage->Save();
+  print "Finished testing ccdsoftCameraImage module.\n";
   sleep 1;
 }

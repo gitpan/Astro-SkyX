@@ -9,7 +9,8 @@ lib/Astro/SkyX/Application.pm
 lib/Astro/SkyX/ImageLink.pm
 lib/Astro/SkyX/ImageLinkResults.pm
 lib/Astro/SkyX/TheSkyXAction.pm
-lib/Astro/SkyX/ccdsoftImage.pm
+lib/Astro/SkyX/ccdsoftCameraImage.pm
+lib/Astro/SkyX/ccdsoftAutoguiderImage.pm
 lib/Astro/SkyX/ccdsoftCamera.pm
 lib/Astro/SkyX/sky6DataWizard.pm
 lib/Astro/SkyX/sky6DirectGuide.pm

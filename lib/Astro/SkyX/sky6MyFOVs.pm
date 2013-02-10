@@ -58,7 +58,7 @@ our @READWRITEPROPS = qw(  );
       my $method = $1;
       my $p;
       # Let's build the javascript
-      $newtext = join ',', map{ /^[0-9.]*$/ ? $_ : qq/'$_'/ }@newval;
+      $newtext = join ',', map{ /^[0-9.-]*$/ ? $_ : qq/'$_'/ }@newval;
       $method =~ tr/::/./s;
 
       my ($package, $propertyName) = $AUTOLOAD =~ m/^(.+::)(.+)$/;

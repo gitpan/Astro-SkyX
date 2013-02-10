@@ -58,7 +58,7 @@ our @READWRITEPROPS = qw( CurrentChartHeight CurrentChartWidth FileNameCookie Mi
       my $method = $1;
       # Let's build the javascript
 #      $newtext = join ',', map{ qq/"$_"/ }@newval;
-      $newtext = join ',', map{ /^[0-9.]*$/ ? $_ : qq/'$_'/ }@newval;
+      $newtext = join ',', map{ /^[0-9.-]*$/ ? $_ : qq/'$_'/ }@newval;
       $method =~ tr/::/./s;
 
       my ($package, $propertyName) = $AUTOLOAD =~ m/^(.+::)(.+)$/;
